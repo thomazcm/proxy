@@ -13,11 +13,11 @@ import java.util.Optional;
 public class RequestService {
 
     @Nullable
-    @Value("${secrets.sd_login:default_login}")
+    @Value("${secrets.sd_login:placeholder}")
     private String sdLogin;
 
     @Nullable
-    @Value("${secrets.sd_password:default_password}")
+    @Value("${secrets.sd_password:placeholder}")
     private String sdPassword;
 
     @Nullable
