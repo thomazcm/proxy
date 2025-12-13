@@ -1,5 +1,6 @@
 package com.thomaz.api;
 
+import com.thomaz.config.AuthorizationException;
 import com.thomaz.config.Crypto;
 import jakarta.servlet.http.HttpServletRequest;
 import org.jspecify.annotations.Nullable;
@@ -26,7 +27,7 @@ public class BaseEndpoint {
         return ResponseEntity.ok(
                 Map.of(
                         "status", "UP",
-                        "version", "0.0.1",
+                        "version", "1.0.0",
                         "new_key", Crypto.newBase64Secret256(),
                         "encrypted", Optional.ofNullable(encrypt).map(Crypto::encrypt).orElse("")
                 )
@@ -44,7 +45,9 @@ public class BaseEndpoint {
     }
 
     private static String getDecryptHeader(HttpServletRequest request) {
-        return Optional.ofNullable(request.getHeader("decrypt-key")).orElseThrow(() -> new IllegalArgumentException("Missing 'Decrypt-Key' header"));
+        return Optional.ofNullable(request.getHeader("Authorization"))
+                .map(s -> s.split(" ")[1])
+                .orElseThrow(() -> new AuthorizationException("Missing 'Authorization' header"));
     }
 
 
