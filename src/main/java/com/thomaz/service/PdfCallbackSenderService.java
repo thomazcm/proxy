@@ -14,6 +14,7 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 
 import java.nio.file.Path;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -64,7 +65,7 @@ public class PdfCallbackSenderService {
                 .uri(buildURI(params.organizationId(), "/complete/" + params.compressionId()))
                 .contentType(MediaType.APPLICATION_JSON)
                 .headers(headers -> setHeaderAuth(params, headers))
-                .body(fileResponse)
+                .body(Map.of("compressedFile", fileResponse))
                 .retrieve()
                 .body(String.class);
     }
