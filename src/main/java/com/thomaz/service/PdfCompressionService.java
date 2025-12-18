@@ -95,6 +95,15 @@ public class PdfCompressionService {
                 "-dCompatibilityLevel=1.4",
                 "-dPDFSETTINGS=/" + profile,
 
+                "-dDownsampleColorImages=true",
+                "-dColorImageResolution=110",
+                "-dDownsampleGrayImages=true",
+                "-dGrayImageResolution=110",
+                "-dDownsampleMonoImages=true",
+                "-dMonoImageResolution=220",
+                "-dColorImageDownsampleType=/Bicubic",
+                "-dGrayImageDownsampleType=/Bicubic",
+
                 "-dNOPAUSE",
                 "-dBATCH",
                 "-dSAFER",
