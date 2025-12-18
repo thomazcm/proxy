@@ -49,8 +49,8 @@ public class SdRequestService {
         if (sdLogin == null || sdPassword == null) {
             throw new IllegalStateException("SD credentials are not configured");
         }
-        final String login = Crypto.decrypt(sdLogin);
-        final String password = Crypto.decrypt(sdPassword);
+        final String login = Crypto.decryptWith(sdLogin, key);
+        final String password = Crypto.decryptWith(sdPassword, key);
 
         final String response = restClient.post()
                 .uri(url)

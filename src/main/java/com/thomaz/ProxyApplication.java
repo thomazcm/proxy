@@ -1,8 +1,8 @@
 package com.thomaz;
 
 import com.thomaz.config.Crypto;
-import com.thomaz.config.PdfCompressionProperties;
 import com.thomaz.config.PdfCallbackProperties;
+import com.thomaz.config.PdfCompressionProperties;
 import jakarta.annotation.PostConstruct;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

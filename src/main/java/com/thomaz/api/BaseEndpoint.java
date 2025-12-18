@@ -54,31 +54,29 @@ public class BaseEndpoint {
     @GetMapping("/encrypt-utils")
     public ResponseEntity<Map<String, Object>> healthCheck(HttpServletRequest request,
                                                            @Nullable @RequestParam(required = false) String encrypt) {
-        Crypto.setSecretKey(getDecryptHeader(request));
+//        Crypto.setSecretKey(getDecryptHeader(request));
         return ResponseEntity.ok(
                 Map.of(
                         "status", "UP",
                         "version", "1.0.0",
-                        "new_key", Crypto.newBase64Secret256(),
-                        "encrypted", Optional.ofNullable(encrypt).map(Crypto::encrypt).orElse("")
+                        "new_key", Crypto.newBase64Secret256()
                 )
         );
     }
 
     @PostMapping("/createDraftForm")
     public ResponseEntity<Map<String, String>> createDraftForm(HttpServletRequest request, @RequestBody String requestBody) {
-        return ResponseEntity.ok(service.createDraftForm(getDecryptHeader(request), requestBody));
+        return ResponseEntity.ok(service.createDraftForm(getHeader(request, "Decrypt-Key"), requestBody));
     }
 
     @PostMapping("/patchForm")
     public ResponseEntity<Map<String, String>> patchForm(HttpServletRequest request, @RequestBody String requestBody) {
-        return ResponseEntity.ok(service.patchForm(getDecryptHeader(request), requestBody));
+        return ResponseEntity.ok(service.patchForm(getHeader(request, "Decrypt-Key"), requestBody));
     }
 
-    private static String getDecryptHeader(HttpServletRequest request) {
-        return Optional.ofNullable(request.getHeader("Authorization"))
-                .map(s -> s.split(" ")[1])
-                .orElseThrow(() -> new AuthorizationException("Missing 'Authorization' header"));
+    private static String getHeader(HttpServletRequest request, String header) {
+        return Optional.ofNullable(request.getHeader(header))
+                .orElseThrow(() -> new AuthorizationException("Missing " + header + " header"));
     }
 
 
