@@ -2,9 +2,10 @@ package com.thomaz.api;
 
 import com.thomaz.config.AuthorizationException;
 import com.thomaz.config.Crypto;
+import com.thomaz.service.CompressParameters;
 import com.thomaz.service.PdfCompressionService;
+import com.thomaz.service.SdRequestService;
 import jakarta.servlet.http.HttpServletRequest;
-import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -19,22 +20,34 @@ import java.util.Optional;
 @RequestMapping("/api")
 public class BaseEndpoint {
 
-    private final RequestService service;
+    private final SdRequestService service;
     private final PdfCompressionService pdfCompressionService;
 
-    public BaseEndpoint(RequestService service, PdfCompressionService pdfCompressionService) {
+    public BaseEndpoint(SdRequestService service, PdfCompressionService pdfCompressionService) {
         this.service = service;
         this.pdfCompressionService = pdfCompressionService;
     }
 
     @PostMapping(value = "/compress-pdf", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<byte[]> compress(@RequestParam("file") MultipartFile file) throws Exception {
+    public ResponseEntity<CompressParameters> compress(@RequestParam("file") MultipartFile file, HttpServletRequest request) throws Exception {
         byte[] input = file.getBytes();
-        byte[] compressed = pdfCompressionService.compress(input);
+        PdfCompressionService.requireProbablyPdf(input);
+        final var compressParams = CompressParameters.fromMultipartRequest(request, file);
+
+        pdfCompressionService.compress(input, compressParams);
+
+        return ResponseEntity.ok(compressParams);
+    }
+
+    @PostMapping(value = "/compress-pdf-sync", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<byte[]> compressSync(@RequestParam("file") MultipartFile file) throws Exception {
+        byte[] input = file.getBytes();
+        PdfCompressionService.requireProbablyPdf(input);
+        byte[] compressed = pdfCompressionService.compressSync(input);
 
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + file.getOriginalFilename() + "_compressed.pdf")
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + file.getOriginalFilename() + "-compressed.pdf")
                 .body(compressed);
     }
 

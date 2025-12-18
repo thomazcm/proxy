@@ -2,6 +2,10 @@ package com.thomaz.service;
 
 import com.thomaz.config.InvalidRequestException;
 import com.thomaz.config.PdfCompressionProperties;
+import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -21,22 +25,30 @@ import java.util.concurrent.TimeUnit;
 @Service
 public class PdfCompressionService {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(PdfCompressionService.class);
+
     private final PdfCompressionProperties props;
+    private final PdfCallbackSenderService callbackSender;
     private final Semaphore semaphore;
 
-    public PdfCompressionService(PdfCompressionProperties props) {
+    public PdfCompressionService(PdfCompressionProperties props, PdfCallbackSenderService callbackSender) {
         this.props = props;
-        this.semaphore = new Semaphore(Math.max(1, props.getGs().getMaxConcurrent()));
+        this.callbackSender = callbackSender;
+        this.semaphore = new Semaphore(Math.max(1, props.gs().getMaxConcurrent()));
     }
 
-    public byte[] compress(byte[] inputPdf) throws IOException, InterruptedException {
+    @Async
+    public void compress(byte[] inputPdf, CompressParameters params) throws IOException, InterruptedException {
+        final FileResponse fileResponse = performCompress(inputPdf, params).fileResponse();
+        LOGGER.info("compress complete with result: {}", fileResponse);
+    }
 
-        requireProbablyPdf(inputPdf);
-        if (inputPdf.length > props.getMaxInputBytes()) {
-            throw new InvalidRequestException("Input pdf length exceeds maximum allowed.");
-        }
+    public byte[] compressSync(byte[] inputPdf) throws IOException, InterruptedException {
+        return performCompress(inputPdf, null).compressedFile();
+    }
 
-        String profile = normalizeProfile(props.getGs().getProfile());
+    private CompressResponse performCompress(byte[] inputPdf, @Nullable CompressParameters asyncParameters) throws InterruptedException, IOException {
+        String profile = normalizeProfile(props.gs().getProfile());
         Path in = null;
         Path out = null;
 
@@ -53,7 +65,7 @@ public class PdfCompressionService {
             Files.write(in, inputPdf, StandardOpenOption.TRUNCATE_EXISTING);
 
             List<String> cmd = buildGsCommand(
-                    props.getGs().getPath(),
+                    props.gs().getPath(),
                     profile,
                     in.toAbsolutePath().toString(),
                     out.toAbsolutePath().toString()
@@ -65,11 +77,11 @@ public class PdfCompressionService {
 
             String log = readProcessOutputBounded(p.getInputStream(), 64_000);
 
-            boolean finished = p.waitFor(props.getGs().getTimeoutSeconds(), TimeUnit.SECONDS);
+            boolean finished = p.waitFor(props.gs().getTimeoutSeconds(), TimeUnit.SECONDS);
             if (!finished) {
                 p.destroyForcibly();
                 throw new IllegalStateException("Ghostscript timed out after "
-                        + props.getGs().getTimeoutSeconds() + "s");
+                        + props.gs().getTimeoutSeconds() + "s");
             }
 
             int code = p.exitValue();
@@ -77,9 +89,16 @@ public class PdfCompressionService {
                 throw new IllegalStateException("Ghostscript failed (exit=" + code + "). Output:\n" + log);
             }
 
-            byte[] result = Files.readAllBytes(out);
+            if (asyncParameters != null) {
+                return callbackSender.uploadPdf(out, asyncParameters)
+                        .map(CompressResponse::async)
+                        .orElseThrow(() -> new InvalidRequestException("File upload failed."));
+            } else {
+                byte[] result = Files.readAllBytes(out);
+                final byte[] compressedFile = (result.length > 0 && result.length < inputPdf.length) ? result : inputPdf;
+                return CompressResponse.sync(compressedFile);
+            }
 
-            return (result.length > 0 && result.length < inputPdf.length) ? result : inputPdf;
         } finally {
             semaphore.release();
             safeDelete(in);
@@ -96,9 +115,9 @@ public class PdfCompressionService {
                 "-dPDFSETTINGS=/" + profile,
 
                 "-dDownsampleColorImages=true",
-                "-dColorImageResolution=110",
+                "-dColorImageResolution=125",
                 "-dDownsampleGrayImages=true",
-                "-dGrayImageResolution=110",
+                "-dGrayImageResolution=125",
                 "-dDownsampleMonoImages=true",
                 "-dMonoImageResolution=220",
                 "-dColorImageDownsampleType=/Bicubic",
@@ -114,7 +133,7 @@ public class PdfCompressionService {
         );
     }
 
-    private static String normalizeProfile(String profile) {
+    private static String normalizeProfile(@Nullable String profile) {
         if (profile == null) {
             return "ebook";
         }
@@ -125,8 +144,8 @@ public class PdfCompressionService {
         };
     }
 
-    private static void requireProbablyPdf(byte[] bytes) {
-        if (bytes == null || bytes.length < 5) {
+    public static void requireProbablyPdf(byte[] bytes) {
+        if (bytes.length < 5) {
             throw new InvalidRequestException("Empty file");
         }
         String header = new String(bytes, 0, Math.min(bytes.length, 8), StandardCharsets.US_ASCII);
@@ -151,7 +170,7 @@ public class PdfCompressionService {
         return sb.toString();
     }
 
-    private static void safeDelete(Path p) {
+    private static void safeDelete(@Nullable Path p) {
         if (p == null) {
             return;
         }

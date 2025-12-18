@@ -1,4 +1,4 @@
-package com.thomaz.api;
+package com.thomaz.service;
 
 import com.thomaz.config.Crypto;
 import org.jspecify.annotations.Nullable;
@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.Optional;
 
 @Service
-public class RequestService {
+public class SdRequestService {
 
     @Nullable
     @Value("${secrets.sd_login:placeholder}")
@@ -21,17 +21,17 @@ public class RequestService {
     private String sdPassword;
 
     @Nullable
-    @Value ("${rest.client.sd.patch.form.url:placeholder}")
+    @Value("${rest.client.sd.patch.form.url:placeholder}")
     private String sdPatchFormUrl;
 
     @Nullable
-    @Value ("${rest.client.sd.create.draft.form.url:placeholder}")
+    @Value("${rest.client.sd.create.draft.form.url:placeholder}")
     private String sdCreateDraftFormUrl;
 
     private final RestClient restClient;
 
-    public RequestService(RestClient restClient) {
-        this.restClient = restClient;
+    public SdRequestService() {
+        this.restClient = RestClient.builder().build();
     }
 
     public Map<String, String> createDraftForm(String key, String jsonBody) {

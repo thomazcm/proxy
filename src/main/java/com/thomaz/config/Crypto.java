@@ -7,6 +7,7 @@ import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.Base64;
 
@@ -23,11 +24,33 @@ public final class Crypto {
         throw new IllegalStateException("Utility class");
     }
 
+    public static void setCipher() {
+        try {
+            cipher = Cipher.getInstance(ALGORITHM);
+        } catch (Exception e) {
+            throw new CryptoException(e.getMessage(), e);
+        }
+    }
+
     public static void setSecretKey(String secretKeyString) {
         try {
             byte[] keyBytes = Base64.getDecoder().decode(secretKeyString);
             secretKey = new SecretKeySpec(keyBytes, "AES");
-            cipher = Cipher.getInstance(ALGORITHM);
+        } catch (Exception e) {
+            throw new CryptoException(e.getMessage(), e);
+        }
+    }
+
+    public static String decodeBase64(String encoded) {
+        if (encoded == null) {
+            return null;
+        }
+        if (encoded.isEmpty()) {
+            return "";
+        }
+        try {
+            byte[] decodedBytes = Base64.getDecoder().decode(encoded);
+            return new String(decodedBytes, StandardCharsets.UTF_8);
         } catch (Exception e) {
             throw new CryptoException(e.getMessage(), e);
         }
@@ -60,7 +83,17 @@ public final class Crypto {
         }
     }
 
+    public static String decryptWith(String cipherText, String externalKey) {
+        byte[] keyBytes = Base64.getDecoder().decode(externalKey);
+        SecretKey externalSecretKey = new SecretKeySpec(keyBytes, "AES");
+        return decrypt(cipherText, externalSecretKey);
+    }
+
     public static String decrypt(String cipherText) {
+        return decrypt(cipherText, secretKey);
+    }
+
+    public static String decrypt(String cipherText, SecretKey secretKey) {
         if (cipherText == null) {
             return null;
         }

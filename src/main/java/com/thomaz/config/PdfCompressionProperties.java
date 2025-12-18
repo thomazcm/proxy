@@ -17,7 +17,7 @@ public class PdfCompressionProperties {
         this.maxInputBytes = maxInputBytes;
     }
 
-    public Gs getGs() {
+    public Gs gs() {
         return gs;
     }
 

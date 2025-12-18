@@ -1,6 +1,5 @@
 package com.thomaz.config;
 
-import com.thomaz.api.RequestService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
