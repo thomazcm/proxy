@@ -27,7 +27,7 @@ public class BaseEndpoint {
         this.pdfCompressionService = pdfCompressionService;
     }
 
-    @PostMapping(value = "value = /compress-pdf", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/compress-pdf", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<byte[]> compress(@RequestParam("file") MultipartFile file) throws Exception {
         byte[] input = file.getBytes();
         byte[] compressed = pdfCompressionService.compress(input);
