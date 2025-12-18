@@ -1,1 +1,1 @@
-web: java -Dserver.port=$PORT -jar target/influencer-btec.jar -XX:+UseContainerSupport
+web: java -Dserver.port=$PORT -jar target/proxy.jar -XX:+UseContainerSupport
