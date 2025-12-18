@@ -1,5 +1,6 @@
 ### Project
 src/main/resources/env.properties
+src/main/**/local
 
 target/
 !.mvn/wrapper/maven-wrapper.jar

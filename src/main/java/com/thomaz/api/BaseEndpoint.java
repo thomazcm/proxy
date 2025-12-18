@@ -2,10 +2,15 @@ package com.thomaz.api;
 
 import com.thomaz.config.AuthorizationException;
 import com.thomaz.config.Crypto;
+import com.thomaz.service.PdfCompressionService;
 import jakarta.servlet.http.HttpServletRequest;
+import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Map;
 import java.util.Optional;
@@ -15,9 +20,22 @@ import java.util.Optional;
 public class BaseEndpoint {
 
     private final RequestService service;
+    private final PdfCompressionService pdfCompressionService;
 
-    public BaseEndpoint(RequestService service) {
+    public BaseEndpoint(RequestService service, PdfCompressionService pdfCompressionService) {
         this.service = service;
+        this.pdfCompressionService = pdfCompressionService;
+    }
+
+    @PostMapping(value = "value = /compress-pdf", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<byte[]> compress(@RequestParam("file") MultipartFile file) throws Exception {
+        byte[] input = file.getBytes();
+        byte[] compressed = pdfCompressionService.compress(input);
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + file.getOriginalFilename() + "_compressed.pdf")
+                .body(compressed);
     }
 
     @GetMapping("/encrypt-utils")
