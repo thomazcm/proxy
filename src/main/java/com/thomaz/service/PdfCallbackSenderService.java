@@ -48,20 +48,25 @@ public class PdfCallbackSenderService {
         parts.add("file", pdfResource);
 
         final FileResponse response = restClient.post()
-                .uri(buildURI(args.organizationId(), "_upload"))
-                .headers(h -> {
-                    h.setContentType(MediaType.MULTIPART_FORM_DATA);
-                    props.getTokenForOrg(args.organizationId())
-                            .map(token -> Crypto.decryptWith(token, args.decryptKey()))
-                            .map(Crypto::decodeBase64)
-                            .ifPresent(h::setBearerAuth);
-                })
+                .uri(buildURI(args.organizationId(), "/_upload"))
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .headers(headers -> setHeaderAuth(args, headers))
                 .body(parts)
                 .retrieve()
                 .body(FileResponse.class);
 
 
         return Optional.ofNullable(response);
+    }
+
+    public @Nullable String saveCompressionResult(CompressParameters params, FileResponse fileResponse) {
+        return restClient.post()
+                .uri(buildURI(params.organizationId(), "/complete/" + params.compressionId()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .headers(headers -> setHeaderAuth(params, headers))
+                .body(fileResponse)
+                .retrieve()
+                .body(String.class);
     }
 
 
@@ -73,6 +78,13 @@ public class PdfCallbackSenderService {
         );
 
         return "https://" + joined.replace("//", "/");
+    }
+
+    private void setHeaderAuth(CompressParameters args, HttpHeaders headers) {
+        props.getTokenForOrg(args.organizationId())
+                .map(token -> Crypto.decryptWith(token, args.decryptKey()))
+                .map(Crypto::decodeBase64)
+                .ifPresent(headers::setBearerAuth);
     }
 
     private String toCompressedFileName(@Nullable String originalFileName) {

@@ -2,6 +2,8 @@ package com.thomaz.service;
 
 import org.jspecify.annotations.Nullable;
 
+import java.util.Optional;
+
 public record CompressResponse(
         byte[] compressedFile,
         @Nullable FileResponse fileResponse
@@ -13,5 +15,9 @@ public record CompressResponse(
 
     public static CompressResponse async(FileResponse fileResponse) {
         return new CompressResponse(new byte[0], fileResponse);
+    }
+
+    public Optional<FileResponse> fileResponseOpt() {
+        return Optional.ofNullable(fileResponse);
     }
 }

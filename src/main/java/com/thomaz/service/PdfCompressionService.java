@@ -39,8 +39,10 @@ public class PdfCompressionService {
 
     @Async
     public void compress(byte[] inputPdf, CompressParameters params) throws IOException, InterruptedException {
-        final FileResponse fileResponse = performCompress(inputPdf, params).fileResponse();
+        final FileResponse fileResponse = performCompress(inputPdf, params).fileResponseOpt().orElseThrow();
         LOGGER.info("compress complete with result: {}", fileResponse);
+        final String result = callbackSender.saveCompressionResult(params, fileResponse);
+        LOGGER.info("compress complete with result: {}", result);
     }
 
     public byte[] compressSync(byte[] inputPdf) throws IOException, InterruptedException {
