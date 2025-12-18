@@ -6,10 +6,12 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.jspecify.annotations.Nullable;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.Base64;
 import java.util.Optional;
 
 public record CompressParameters(
         String originalFileName,
+        String decodedFileName,
         String compressionId,
         String organizationId,
         @JsonIgnore
@@ -22,7 +24,7 @@ public record CompressParameters(
         String decryptKey = getHeader(request, "Decrypt-Key");
         String fileName = Optional.ofNullable(file.getOriginalFilename()).orElse("original.pdf");
 
-        return new CompressParameters(fileName, compressionId, organizationId, decryptKey);
+        return new CompressParameters(fileName, new String(Base64.getEncoder().encode(fileName.getBytes())), compressionId, organizationId, decryptKey);
     }
 
 
