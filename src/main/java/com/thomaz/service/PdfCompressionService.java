@@ -17,6 +17,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.Semaphore;
@@ -39,10 +41,23 @@ public class PdfCompressionService {
 
     @Async
     public void compress(byte[] inputPdf, CompressParameters params) throws IOException, InterruptedException {
+        final LocalDateTime minResponseTime = LocalDateTime.now().plusSeconds(3);
         final FileResponse fileResponse = performCompress(inputPdf, params).fileResponseOpt().orElseThrow();
         LOGGER.info("compress complete with result: {}", fileResponse);
+        waitUntil(minResponseTime);
         final String result = callbackSender.saveCompressionResult(params, fileResponse);
         LOGGER.info("compress complete with result: {}", result);
+    }
+
+    private void waitUntil(LocalDateTime minResponseTime) {
+        long msToWait = LocalDateTime.now().until(minResponseTime, ChronoUnit.MILLIS);
+        if (msToWait > 0) {
+            try {
+                Thread.sleep(msToWait);
+            } catch (InterruptedException _) {
+                Thread.currentThread().interrupt();
+            }
+        }
     }
 
     public byte[] compressSync(byte[] inputPdf) throws IOException, InterruptedException {
