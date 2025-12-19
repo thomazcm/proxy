@@ -6,5 +6,6 @@ public record FileResponse(
         @JsonProperty("_id")
         String id,
         String hash,
-        String contentType
+        String contentType,
+        long length
 ) {}
