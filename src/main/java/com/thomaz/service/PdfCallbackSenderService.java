@@ -13,6 +13,7 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
@@ -32,7 +33,7 @@ public class PdfCallbackSenderService {
         Resource pdfResource = new FileSystemResource(tempOutputPdfPath.toFile()) {
             @Override
             public String getFilename() {
-                return toCompressedFileName(args.originalFileName());
+                return toCompressedFileName(args.fallbackFilename());
             }
         };
 
@@ -43,7 +44,8 @@ public class PdfCallbackSenderService {
         fileHeaders.setContentDisposition(
                 ContentDisposition.formData()
                         .name("file")
-                        .filename(pdfResource.getFilename())
+                        .filename(args.fallbackFilename())
+                        .filename(args.originalFileName(), StandardCharsets.UTF_8)
                         .build()
         );
         parts.add("file", pdfResource);

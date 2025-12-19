@@ -11,6 +11,7 @@ import java.util.Optional;
 
 public record CompressParameters(
         String originalFileName,
+        String fallbackFilename,
         String compressionId,
         String organizationId,
         @JsonIgnore
@@ -21,9 +22,10 @@ public record CompressParameters(
         String compressionId = getHeader(request, "Compression-Id");
         String organizationId = getHeader(request, "Organization-Id");
         String decryptKey = getHeader(request, "Decrypt-Key");
-        String fileName = Optional.ofNullable(file.getOriginalFilename()).map(CompressParameters::headerSafeFilename).orElse("original.pdf");
+        String fileName = Optional.ofNullable(file.getOriginalFilename()).orElse("original.pdf");
+        String fallbackFilename = Optional.ofNullable(file.getOriginalFilename()).map(CompressParameters::headerSafeFilename).orElse("original.pdf");
 
-        return new CompressParameters(fileName, compressionId, organizationId, decryptKey);
+        return new CompressParameters(fileName, fallbackFilename, compressionId, organizationId, decryptKey);
     }
 
 
