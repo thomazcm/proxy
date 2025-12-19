@@ -1,7 +1,10 @@
 package com.thomaz.service;
 
-import com.thomaz.config.InvalidRequestException;
 import com.thomaz.config.PdfCompressionProperties;
+import com.thomaz.config.exception.InvalidRequestException;
+import com.thomaz.form.CompressParameters;
+import com.thomaz.form.CompressResponse;
+import com.thomaz.form.FileResponse;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -1,8 +1,8 @@
 package com.thomaz.api;
 
-import com.thomaz.config.AuthorizationException;
 import com.thomaz.config.Crypto;
-import com.thomaz.service.CompressParameters;
+import com.thomaz.config.exception.AuthorizationException;
+import com.thomaz.form.CompressParameters;
 import com.thomaz.service.PdfCompressionService;
 import com.thomaz.service.SdRequestService;
 import jakarta.servlet.http.HttpServletRequest;

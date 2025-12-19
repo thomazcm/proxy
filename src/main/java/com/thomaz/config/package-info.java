@@ -1,4 +1,4 @@
 @NullMarked
-package com.thomaz.api;
+package com.thomaz.config;
 
 import org.jspecify.annotations.NullMarked;

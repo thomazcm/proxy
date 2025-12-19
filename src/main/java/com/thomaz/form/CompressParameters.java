@@ -1,7 +1,7 @@
-package com.thomaz.service;
+package com.thomaz.form;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.thomaz.config.AuthorizationException;
+import com.thomaz.config.exception.AuthorizationException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.jspecify.annotations.Nullable;
 import org.springframework.web.multipart.MultipartFile;

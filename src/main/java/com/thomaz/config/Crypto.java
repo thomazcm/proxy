@@ -1,5 +1,6 @@
 package com.thomaz.config;
 
+import com.thomaz.config.exception.CryptoException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

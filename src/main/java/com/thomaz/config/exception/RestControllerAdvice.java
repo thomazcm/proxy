@@ -1,4 +1,4 @@
-package com.thomaz.config;
+package com.thomaz.config.exception;
 
 import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;

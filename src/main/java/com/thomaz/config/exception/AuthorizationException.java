@@ -1,4 +1,4 @@
-package com.thomaz.config;
+package com.thomaz.config.exception;
 
 public class AuthorizationException extends RuntimeException {
 

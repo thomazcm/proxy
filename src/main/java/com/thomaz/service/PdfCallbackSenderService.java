@@ -2,6 +2,8 @@ package com.thomaz.service;
 
 import com.thomaz.config.Crypto;
 import com.thomaz.config.PdfCallbackProperties;
+import com.thomaz.form.CompressParameters;
+import com.thomaz.form.FileResponse;
 import org.jspecify.annotations.Nullable;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
@@ -24,9 +26,9 @@ public class PdfCallbackSenderService {
     private final RestClient restClient;
     private final PdfCallbackProperties props;
 
-    public PdfCallbackSenderService(PdfCallbackProperties props) {
+    public PdfCallbackSenderService(PdfCallbackProperties props, RestClient restClient1) {
         this.props = props;
-        this.restClient = RestClient.builder().build();
+        this.restClient = restClient1;
     }
 
     public Optional<FileResponse> uploadPdf(Path tempOutputPdfPath, CompressParameters args) {
@@ -65,7 +67,6 @@ public class PdfCallbackSenderService {
     public @Nullable String saveCompressionResult(CompressParameters params, FileResponse fileResponse) {
         return restClient.post()
                 .uri(buildURI(params.organizationId(), "/complete/" + params.compressionId()))
-                .contentType(MediaType.APPLICATION_JSON)
                 .headers(headers -> setHeaderAuth(params, headers))
                 .body(Map.of("compressedFile", fileResponse))
                 .retrieve()
@@ -75,7 +76,6 @@ public class PdfCallbackSenderService {
     public @Nullable String logCompressionError(CompressParameters params, Exception e) {
         return restClient.post()
                 .uri(buildURI(params.organizationId(), "/timeoutCompression/" + params.compressionId()))
-                .contentType(MediaType.APPLICATION_JSON)
                 .headers(headers -> setHeaderAuth(params, headers))
                 .body(Map.of("error", Map.of(
                                 "message", e.getMessage() != null ? e.getMessage() : "Erro inesperado",

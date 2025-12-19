@@ -1,4 +1,4 @@
-package com.thomaz.service;
+package com.thomaz.form;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
