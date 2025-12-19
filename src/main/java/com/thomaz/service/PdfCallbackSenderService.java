@@ -75,7 +75,7 @@ public class PdfCallbackSenderService {
 
     public @Nullable String logCompressionError(CompressParameters params, Exception e) {
         return restClient.post()
-                .uri(buildURI(params.organizationId(), "/timeoutCompression/" + params.compressionId()))
+                .uri(buildURI(params.organizationId(), "/setToError/" + params.compressionId()))
                 .headers(headers -> setHeaderAuth(params, headers))
                 .body(Map.of("error", Map.of(
                                 "message", e.getMessage() != null ? e.getMessage() : "Erro inesperado",
