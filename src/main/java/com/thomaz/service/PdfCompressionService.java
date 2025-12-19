@@ -40,13 +40,20 @@ public class PdfCompressionService {
     }
 
     @Async
-    public void compress(byte[] inputPdf, CompressParameters params) throws IOException, InterruptedException {
+    public void compress(byte[] inputPdf, CompressParameters params) {
         final LocalDateTime minResponseTime = LocalDateTime.now().plusSeconds(3);
-        final FileResponse fileResponse = performCompress(inputPdf, params).fileResponseOpt().orElseThrow();
-        LOGGER.info("compress complete with result: {}", fileResponse);
-        waitUntil(minResponseTime);
-        final String result = callbackSender.saveCompressionResult(params, fileResponse);
-        LOGGER.info("compress complete with result: {}", result);
+        try {
+            final FileResponse fileResponse = performCompress(inputPdf, params).fileResponseOpt().orElseThrow();
+            LOGGER.info("compress complete with result: {}", fileResponse);
+            waitUntil(minResponseTime);
+            final String result = callbackSender.saveCompressionResult(params, fileResponse);
+            LOGGER.info("compress complete with result: {}", result);
+        } catch (Exception e) {
+            LOGGER.error("compress error for params {}", params, e);
+            waitUntil(minResponseTime);
+            final String errorLogResponse = callbackSender.logCompressionError(params, e);
+            LOGGER.info("error logged with result: {}", errorLogResponse);
+        }
     }
 
     private void waitUntil(LocalDateTime minResponseTime) {

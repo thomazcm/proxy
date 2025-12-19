@@ -72,6 +72,20 @@ public class PdfCallbackSenderService {
                 .body(String.class);
     }
 
+    public @Nullable String logCompressionError(CompressParameters params, Exception e) {
+        return restClient.post()
+                .uri(buildURI(params.organizationId(), "/timeoutCompression/" + params.compressionId()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .headers(headers -> setHeaderAuth(params, headers))
+                .body(Map.of("error", Map.of(
+                                "message", e.getMessage() != null ? e.getMessage() : "Erro inesperado",
+                                "type", e.getClass().getSimpleName()
+                        )
+                ))
+                .retrieve()
+                .body(String.class);
+    }
+
 
     private String buildURI(String organizationId, String methodIdentifier) {
         final String joined = String.join("/",
