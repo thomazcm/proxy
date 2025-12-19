@@ -47,7 +47,8 @@ public record CompressParameters(
         s = s.replaceAll("[^A-Za-z0-9._-]", "_");
 
         s = s.replaceAll("_+", "_")
-                .replaceAll("^[._-]+|[._-]+$", "");
+                .replaceAll("^_-$", "")
+                .replaceAll("^-_$", "");
 
         return s.isBlank() ? "file" : s;
     }
