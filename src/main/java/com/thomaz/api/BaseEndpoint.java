@@ -39,11 +39,18 @@ public class BaseEndpoint {
         final Path tmpDir = Paths.get(System.getProperty("java.io.tmpdir"));
         final Path in = Files.createTempFile(tmpDir, "pdf-in-", ".pdf");
         final Path out = Files.createTempFile(tmpDir, "pdf-out-", ".pdf");
-        final var compressParams = CompressParameters.fromMultipartRequest(request, file);
 
-        file.transferTo(in);
-        compressionService.compress(compressParams, in, out);
-        return ResponseEntity.ok(compressParams);
+        try {
+            final var compressParams = CompressParameters.fromMultipartRequest(request, file);
+            file.transferTo(in);
+            compressionService.compress(compressParams, in, out);
+            return ResponseEntity.ok(compressParams);
+
+        } catch (Exception e) {
+            Util.safeDelete(in);
+            Util.safeDelete(out);
+            throw e;
+        }
     }
 
 //    @PostMapping(value = "/compress-pdf-sync", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
