@@ -3,8 +3,6 @@ package com.thomaz.service;
 import com.thomaz.config.PdfCompressionProperties;
 import com.thomaz.config.exception.InvalidRequestException;
 import com.thomaz.form.CompressParameters;
-import com.thomaz.form.CompressResponse;
-import com.thomaz.form.FileResponse;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,14 +16,14 @@ import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+
+import static com.thomaz.service.Util.requireProbablyPdf;
+import static com.thomaz.service.Util.waitUntil;
 
 @Service
 public class PdfCompressionService {
@@ -43,53 +41,32 @@ public class PdfCompressionService {
     }
 
     @Async
-    public void compress(byte[] inputPdf, CompressParameters params) {
+    public void compress(CompressParameters params, Path in, Path out) {
         final LocalDateTime minResponseTime = LocalDateTime.now().plusSeconds(3);
         try {
-            final FileResponse fileResponse = performCompress(inputPdf, params).fileResponseOpt().orElseThrow();
-            LOGGER.info("compress complete with result: {}", fileResponse);
+            performCompression(in, out);
             waitUntil(minResponseTime);
-            final String result = callbackSender.saveCompressionResult(params, fileResponse);
-            LOGGER.info("compress complete with result: {}", result);
+            callbackSender.uploadPdf(out, params).ifPresent(fileResponse -> {
+                LOGGER.info("compression uploaded with response: {}", fileResponse);
+                callbackSender.completeCompression(params, fileResponse)
+                        .ifPresent(completionResponse -> LOGGER.info("compression completed with response: {}", completionResponse));
+            });
         } catch (Exception e) {
             LOGGER.error("compress error for params {}", params, e);
             waitUntil(minResponseTime);
-            final String errorLogResponse = callbackSender.logCompressionError(params, e);
-            LOGGER.info("error logged with result: {}", errorLogResponse);
+            callbackSender.logCompressionError(params, e)
+                    .ifPresent(errorLogResponse -> LOGGER.info("error logged with response {}", errorLogResponse));
         }
     }
 
-    private void waitUntil(LocalDateTime minResponseTime) {
-        long msToWait = LocalDateTime.now().until(minResponseTime, ChronoUnit.MILLIS);
-        if (msToWait > 0) {
-            try {
-                Thread.sleep(msToWait);
-            } catch (InterruptedException _) {
-                Thread.currentThread().interrupt();
-            }
-        }
-    }
-
-    public byte[] compressSync(byte[] inputPdf) throws IOException, InterruptedException {
-        return performCompress(inputPdf, null).compressedFile();
-    }
-
-    private CompressResponse performCompress(byte[] inputPdf, @Nullable CompressParameters asyncParameters) throws InterruptedException, IOException {
+    private void performCompression(Path in, Path out) {
         String profile = normalizeProfile(props.gs().getProfile());
-        Path in = null;
-        Path out = null;
-
-        boolean acquired = semaphore.tryAcquire(1, 5, TimeUnit.SECONDS);
-        if (!acquired) {
-            throw new InvalidRequestException("Server is busy. Please try again later.");
-        }
-
         try {
-            Path tmpDir = Paths.get(System.getProperty("java.io.tmpdir"));
-            in = Files.createTempFile(tmpDir, "pdf-in-", ".pdf");
-            out = Files.createTempFile(tmpDir, "pdf-out-", ".pdf");
-
-            Files.write(in, inputPdf, StandardOpenOption.TRUNCATE_EXISTING);
+            requireProbablyPdf(in);
+            boolean acquired = semaphore.tryAcquire(1, 5, TimeUnit.SECONDS);
+            if (!acquired) {
+                throw new InvalidRequestException("Server is busy. Please try again later.");
+            }
 
             List<String> cmd = buildGsCommand(
                     props.gs().getPath(),
@@ -115,21 +92,15 @@ public class PdfCompressionService {
             if (code != 0) {
                 throw new IllegalStateException("Ghostscript failed (exit=" + code + "). Output:\n" + log);
             }
+            LOGGER.info("compress complete with result size: {}", Files.size(out));
 
-            if (asyncParameters != null) {
-                return callbackSender.uploadPdf(out, asyncParameters)
-                        .map(CompressResponse::async)
-                        .orElseThrow(() -> new InvalidRequestException("File upload failed."));
-            } else {
-                byte[] result = Files.readAllBytes(out);
-                final byte[] compressedFile = (result.length > 0 && result.length < inputPdf.length) ? result : inputPdf;
-                return CompressResponse.sync(compressedFile);
-            }
-
+        } catch (IOException e) {
+            throw new InvalidRequestException(e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new InvalidRequestException(e);
         } finally {
             semaphore.release();
-            safeDelete(in);
-            safeDelete(out);
         }
     }
 
@@ -171,15 +142,6 @@ public class PdfCompressionService {
         };
     }
 
-    public static void requireProbablyPdf(byte[] bytes) {
-        if (bytes.length < 5) {
-            throw new InvalidRequestException("Empty file");
-        }
-        String header = new String(bytes, 0, Math.min(bytes.length, 8), StandardCharsets.US_ASCII);
-        if (!header.startsWith("%PDF-")) {
-            throw new InvalidRequestException("Not a PDF (missing %PDF- header)");
-        }
-    }
 
     private static String readProcessOutputBounded(InputStream in, int maxChars) throws IOException {
         StringBuilder sb = new StringBuilder(Math.min(maxChars, 4096));
@@ -195,16 +157,6 @@ public class PdfCompressionService {
             }
         }
         return sb.toString();
-    }
-
-    private static void safeDelete(@Nullable Path p) {
-        if (p == null) {
-            return;
-        }
-        try {
-            Files.deleteIfExists(p);
-        } catch (Exception ignored) {
-        }
     }
 
 

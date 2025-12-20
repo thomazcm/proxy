@@ -5,11 +5,14 @@ import com.thomaz.config.PdfCallbackProperties;
 import com.thomaz.form.CompressParameters;
 import com.thomaz.form.FileResponse;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -19,10 +22,13 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 
 @Service
 public class PdfCallbackSenderService {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(PdfCallbackSenderService.class);
+    private static final String ORGANIZATION_ID_SUFFIX = "sydle.one/api/1/pdf-compression/_classId";
     private final RestClient restClient;
     private final PdfCallbackProperties props;
 
@@ -52,30 +58,32 @@ public class PdfCallbackSenderService {
         );
         parts.add("file", pdfResource);
 
-        final FileResponse response = restClient.post()
-                .uri(buildURI(args.organizationId(), "/_upload"))
+        String requestUri = buildURI(args.organizationId(), "/_upload");
+        return sendRequest(requestUri, uri -> restClient.post()
+                .uri(uri)
                 .contentType(MediaType.MULTIPART_FORM_DATA)
                 .headers(headers -> setHeaderAuth(args, headers))
                 .body(parts)
                 .retrieve()
-                .body(FileResponse.class);
-
-
-        return Optional.ofNullable(response);
+                .toEntity(FileResponse.class)
+        );
     }
 
-    public @Nullable String saveCompressionResult(CompressParameters params, FileResponse fileResponse) {
-        return restClient.post()
-                .uri(buildURI(params.organizationId(), "/complete/" + params.compressionId()))
+    public Optional<String> completeCompression(CompressParameters params, FileResponse fileResponse) {
+        String requestUri = buildURI(params.organizationId(), "/complete/" + params.compressionId());
+        return sendRequest(requestUri, uri -> restClient.post()
+                .uri(uri)
                 .headers(headers -> setHeaderAuth(params, headers))
                 .body(Map.of("compressedFile", fileResponse))
                 .retrieve()
-                .body(String.class);
+                .toEntity(String.class)
+        );
     }
 
-    public @Nullable String logCompressionError(CompressParameters params, Exception e) {
-        return restClient.post()
-                .uri(buildURI(params.organizationId(), "/setToError/" + params.compressionId()))
+    public Optional<String> logCompressionError(CompressParameters params, Exception e) {
+        String requestUri = buildURI(params.organizationId(), "/setToError/" + params.compressionId());
+        return sendRequest(requestUri, uri -> restClient.post()
+                .uri(uri)
                 .headers(headers -> setHeaderAuth(params, headers))
                 .body(Map.of("error", Map.of(
                                 "message", e.getMessage() != null ? e.getMessage() : "Erro inesperado",
@@ -83,13 +91,30 @@ public class PdfCallbackSenderService {
                         )
                 ))
                 .retrieve()
-                .body(String.class);
+                .toEntity(String.class)
+        );
     }
 
 
+    private <T> Optional<T> sendRequest(String uri, Function<String, ResponseEntity<T>> requestFn) {
+        try {
+            final ResponseEntity<T> response = requestFn.apply(uri);
+            if (response.getStatusCode().is2xxSuccessful()) {
+                LOGGER.info("Completed request to {}.", uri);
+                return Optional.ofNullable(response.getBody());
+            } else {
+                LOGGER.error("Request to {} failed with status code: {}. Response: {}", uri, response.getStatusCode(), response.getBody());
+                return Optional.empty();
+            }
+        } catch (Exception e) {
+            LOGGER.error("Request to {} failed.", uri, e);
+            return Optional.empty();
+        }
+    }
+
     private String buildURI(String organizationId, String methodIdentifier) {
         final String joined = String.join("/",
-                organizationId + ".sydle.one/api/1/pdf-compression/_classId/",
+                organizationId + "." + ORGANIZATION_ID_SUFFIX,
                 props.getFileClassId(),
                 methodIdentifier
         );
