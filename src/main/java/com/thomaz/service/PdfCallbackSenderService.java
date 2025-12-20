@@ -87,7 +87,8 @@ public class PdfCallbackSenderService {
                 .headers(headers -> setHeaderAuth(params, headers))
                 .body(Map.of("error", Map.of(
                                 "message", e.getMessage() != null ? e.getMessage() : "Erro inesperado",
-                                "type", Optional.ofNullable(e.getCause()).orElse(e).getClass().getSimpleName()
+                                "exception", e.getClass().getSimpleName(),
+                                "cause", Optional.ofNullable(e.getCause()).orElse(e).getClass().getSimpleName()
                         )
                 ))
                 .retrieve()
