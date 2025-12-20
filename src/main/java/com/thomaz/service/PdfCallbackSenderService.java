@@ -89,7 +89,7 @@ public class PdfCallbackSenderService {
 
     private String buildURI(String organizationId, String methodIdentifier) {
         final String joined = String.join("/",
-                organizationId + ".sydle.one/api/1/routines/_classId/",
+                organizationId + ".sydle.one/api/1/pdf-compression/_classId/",
                 props.getFileClassId(),
                 methodIdentifier
         );
