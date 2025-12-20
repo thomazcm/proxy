@@ -48,9 +48,9 @@ public class PdfCompressionService {
             performCompression(in, out);
             waitUntil(minResponseTime);
             callbackSender.uploadPdf(out, params).ifPresent(fileResponse -> {
-                LOGGER.info("compression uploaded with response: {}", fileResponse);
+                LOGGER.info("compression [{}] uploaded with response: {}", params.compressionId(), fileResponse);
                 callbackSender.completeCompression(params, fileResponse)
-                        .ifPresent(completionResponse -> LOGGER.info("compression completed with response: {}", completionResponse));
+                        .ifPresent(completionResponse -> LOGGER.info("compression [{}] completed", params.compressionId()));
             });
         } catch (Exception e) {
             LOGGER.error("compress error for params {}", params, e);
