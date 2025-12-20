@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -33,21 +34,16 @@ public class BaseEndpoint {
     }
 
     @PostMapping(value = "/compress-pdf", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<CompressParameters> compress(@RequestParam("file") MultipartFile file, HttpServletRequest request) throws Exception {
+    public ResponseEntity<CompressParameters> compress(@RequestParam("file") MultipartFile file, HttpServletRequest request) throws IOException {
 
         final Path tmpDir = Paths.get(System.getProperty("java.io.tmpdir"));
         final Path in = Files.createTempFile(tmpDir, "pdf-in-", ".pdf");
         final Path out = Files.createTempFile(tmpDir, "pdf-out-", ".pdf");
         final var compressParams = CompressParameters.fromMultipartRequest(request, file);
 
-        try {
-            file.transferTo(in);
-            compressionService.compress(compressParams, in, out);
-            return ResponseEntity.ok(compressParams);
-        } finally {
-            Util.safeDelete(in);
-            Util.safeDelete(out);
-        }
+        file.transferTo(in);
+        compressionService.compress(compressParams, in, out);
+        return ResponseEntity.ok(compressParams);
     }
 
 //    @PostMapping(value = "/compress-pdf-sync", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

@@ -22,6 +22,7 @@ import java.util.Locale;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
+import static com.thomaz.service.Util.*;
 import static com.thomaz.service.Util.requireProbablyPdf;
 import static com.thomaz.service.Util.waitUntil;
 
@@ -56,6 +57,9 @@ public class PdfCompressionService {
             waitUntil(minResponseTime);
             callbackSender.logCompressionError(params, e)
                     .ifPresent(errorLogResponse -> LOGGER.info("error logged with response {}", errorLogResponse));
+        } finally {
+            safeDelete(in);
+            safeDelete(out);
         }
     }
 
